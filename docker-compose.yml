@@ -1,0 +1,26 @@
+services:
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: biliard-project
+      POSTGRES_USER: biliard-project
+      POSTGRES_PASSWORD: supersecret
+    ports:
+      - "5432:5432"
+    networks:
+      - app_network
+
+  adminer:
+    image: adminer
+    restart: always
+    environment:
+      ADMINER_DESIGN: dracula
+    ports:
+      - "3333:8080"
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
