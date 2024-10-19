@@ -14,7 +14,6 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/gorilla/csrf"
 )
 
 type config struct {
@@ -50,12 +49,12 @@ func loadEnvConfig() (config, error) {
 	cfg.CSRF.Key = "zTRUrqhAFWSH0NR6SsGpFRQn7KqLEvvh"
 	cfg.CSRF.Secure = false
 
-	cfg.Server.Address = ":3000"
+	cfg.Server.Address = "0.0.0.0:3000"
 
 	return cfg, nil
 }
 
-func main() {
+func webserver() {
 	cfg, err := loadEnvConfig()
 	if err != nil {
 		panic(err)
@@ -90,8 +89,6 @@ func main() {
 		SessionService: sessionService,
 	}
 
-	csrfMw := csrf.Protect([]byte(cfg.CSRF.Key), csrf.Secure(cfg.CSRF.Secure))
-
 	// SETUP CONTROLLERS
 	userC := controllers.Users{
 		UserService:          userService,
@@ -113,7 +110,7 @@ func main() {
 
 	// SETUP ROUTER AND ROUTES
 	r := chi.NewRouter()
-	r.Use(csrfMw)
+	r.Use(setCors)
 	r.Use(umw.SetUser)
 	r.Get(
 		"/",
@@ -154,4 +151,17 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func main() {
+	go webserver()
+	select {}
+}
+
+func setCors(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
+		next.ServeHTTP(w, r)
+	})
 }
