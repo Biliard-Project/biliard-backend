@@ -125,8 +125,21 @@ func (u Users) ProcessSignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	type sessionJsonStruct struct {
+		Session string `json:"session"`
+	}
+	sesJsonStruct := sessionJsonStruct{
+		Session: session.Token,
+	}
+	sesJson, err := json.Marshal(sesJsonStruct)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "something went wrong.", http.StatusInternalServerError)
+		return
+	}
+
 	setCookie(w, CookieSession, session.Token)
-	http.Redirect(w, r, "/users/me", http.StatusFound)
+	fmt.Fprint(w, string(sesJson))
 }
 
 func (u Users) CurrentUser(w http.ResponseWriter, r *http.Request) {
