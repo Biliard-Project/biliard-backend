@@ -27,7 +27,7 @@ func (ps *PatientService) GetAllPatients() (*[]Patient, error) {
 	patients := make([]Patient, 0)
 	for rows.Next() {
 		var patient Patient
-		err = rows.Scan(&patient.Name, &patient.Name, &patient.Gender, &patient.BirthDate)
+		err = rows.Scan(&patient.ID, &patient.Name, &patient.Gender, &patient.BirthDate)
 		if err != nil {
 			return nil, fmt.Errorf("GetAllPatients: %w", err)
 		}
