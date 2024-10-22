@@ -6,10 +6,10 @@ import (
 )
 
 type Patient struct {
-	ID        int
-	Name      string
-	Gender    string
-	BirthDate JSONTime
+	ID        int      `json:"id"`
+	Name      string   `json:"name"`
+	Gender    string   `json:"gender"`
+	BirthDate JSONTime `json:"birth_date"`
 }
 
 type PatientService struct {
@@ -35,4 +35,20 @@ func (ps *PatientService) GetAllPatients() (*[]Patient, error) {
 	}
 
 	return &patients, nil
+}
+
+func (ps *PatientService) Create(name, gender string, birthDate JSONTime) (*Patient, error) {
+	patient := Patient{
+		Name:      name,
+		Gender:    gender,
+		BirthDate: birthDate,
+	}
+	row := ps.DB.QueryRow(`insert into patients(name, gender, birth_date)
+		values ($1, $2, $3) returning id;`, patient.Name, patient.Gender, patient.BirthDate.ConvertToYMD())
+	err := row.Scan(&patient.ID)
+	if err != nil {
+		return nil, fmt.Errorf("create patient: %w", err)
+	}
+
+	return &patient, nil
 }
