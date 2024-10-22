@@ -82,6 +82,9 @@ func webserver() {
 	pwResetService := &models.PasswordResetService{
 		DB: db,
 	}
+	patientService := &models.PatientService{
+		DB: db,
+	}
 	emailService := models.NewEmailService(cfg.SMTP)
 
 	// SETUP MIDDLEWARE
@@ -107,6 +110,10 @@ func webserver() {
 	userC.Templates.ResetPassword = views.Must(
 		views.ParseFS(templates.FS, "reset-pw.html", "tailwind.html"),
 	)
+
+	patientC := controllers.Patients{
+		PatientService: patientService,
+	}
 
 	// SETUP ROUTER AND ROUTES
 	r := chi.NewRouter()
@@ -140,6 +147,9 @@ func webserver() {
 	r.Route("/users/me", func(r chi.Router) {
 		r.Use(umw.RequireUser)
 		r.Get("/", userC.CurrentUser)
+	})
+	r.Route("/patients", func(r chi.Router) {
+		r.Get("/", patientC.ProcessGetPatients)
 	})
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Page not found", http.StatusNotFound)
