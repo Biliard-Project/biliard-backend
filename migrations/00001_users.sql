@@ -6,6 +6,9 @@ CREATE TABLE users (
   name TEXT NOT NULL,
   password TEXT NOT NULL
 );
+
+INSERT INTO users (email, name, password)
+VALUES ('test@test.com', 'Admin', 'test@test.com');
 -- +goose StatementEnd
 
 -- +goose Down

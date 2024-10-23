@@ -9,17 +9,16 @@ import (
 type JSONTime time.Time
 
 const (
-	YYYYMMDD = "2006-01-02"
+	YYYYMMDDHHMMSS = "2006-01-02 15:04:05"
 )
 
 func (t JSONTime) MarshalJSON() ([]byte, error) {
-	// do your serializing here
-	stamp := fmt.Sprintf("\"%s\"", time.Time(t).Format(YYYYMMDD))
+	stamp := fmt.Sprintf("\"%s\"", time.Time(t).Format(YYYYMMDDHHMMSS))
 	return []byte(stamp), nil
 }
 
 func (t JSONTime) ConvertToYMD() string {
-	return time.Time(t).Format(YYYYMMDD)
+	return time.Time(t).Format(YYYYMMDDHHMMSS)
 }
 
 // UnmarshalJSON deserializes JSONTime from JSON
@@ -29,7 +28,7 @@ func (t *JSONTime) UnmarshalJSON(b []byte) error {
 	if s == "null" {
 		return nil
 	}
-	parsedTime, err := time.Parse(`"`+YYYYMMDD+`"`, s)
+	parsedTime, err := time.Parse(`"`+YYYYMMDDHHMMSS+`"`, s)
 	if err != nil {
 		return errors.New("invalid date format, expected YYYY-MM-DD")
 	}

@@ -156,10 +156,12 @@ func webserver() {
 	})
 	r.Route("/patients", func(r chi.Router) {
 		r.Get("/", patientC.ProcessGetPatients)
+		r.Get("/{patientID}", patientC.ProcessGetPatientByID)
 		r.Post("/", patientC.Create)
 	})
 	r.Route("/records", func(r chi.Router) {
 		r.Get("/", recordC.GetAllPatientRecords)
+		r.Get("/patient/{patientID}", recordC.GetRecordsByPatientID)
 	})
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Page not found", http.StatusNotFound)
