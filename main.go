@@ -156,7 +156,9 @@ func webserver() {
 	})
 	r.Route("/patients", func(r chi.Router) {
 		r.Get("/", patientC.ProcessGetPatients)
+		r.Put("/", patientC.UpdatePatient)
 		r.Get("/{patientID}", patientC.ProcessGetPatientByID)
+		r.Delete("/{patientID}", patientC.DeletePatientByID)
 		r.Post("/", patientC.Create)
 	})
 	r.Route("/records", func(r chi.Router) {

@@ -65,7 +65,7 @@ func (pt Patients) ProcessGetPatientByID(w http.ResponseWriter, r *http.Request)
 	patientID, err := strconv.Atoi(chi.URLParam(r, "patientID"))
 	if err != nil {
 		fmt.Println(err)
-		http.Error(w, "error getting records by patient id", http.StatusBadRequest)
+		http.Error(w, "error getting patient by patient id", http.StatusBadRequest)
 		return
 	}
 
@@ -73,17 +73,56 @@ func (pt Patients) ProcessGetPatientByID(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		fmt.Println("jsoning 1")
 		fmt.Println(err)
-		http.Error(w, "Error Creating patient", http.StatusInternalServerError)
+		http.Error(w, "error getting patient by patient id", http.StatusInternalServerError)
 		return
 	}
 
 	patientJson, err := json.Marshal(patientDB)
 	if err != nil {
 		fmt.Println("jsoning 2")
-		http.Error(w, "Error Creating patient", http.StatusInternalServerError)
+		http.Error(w, "error getting patient by patient id", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprint(w, string(patientJson))
+}
+
+func (pt Patients) DeletePatientByID(w http.ResponseWriter, r *http.Request) {
+	patientID, err := strconv.Atoi(chi.URLParam(r, "patientID"))
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "error deleting patient", http.StatusBadRequest)
+		return
+	}
+
+	err = pt.PatientService.Delete(patientID)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "error deleting patient", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprint(w, `{"message":"success"}`)
+}
+
+func (pt Patients) UpdatePatient(w http.ResponseWriter, r *http.Request) {
+	var patient models.Patient
+	err := json.NewDecoder(r.Body).Decode(&patient)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "updating patient: error while decoding json", http.StatusBadRequest)
+		return
+	}
+
+	err = pt.PatientService.UpdatePatient(patient)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "updating patient: error while updating patient inside sql", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprint(w, `{"message":"success"}`)
 }

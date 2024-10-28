@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql"
 	"fmt"
+	"time"
 )
 
 type Patient struct {
@@ -67,4 +68,50 @@ func (ps *PatientService) RetrievePatientByID(id int) (*Patient, error) {
 	}
 
 	return &patient, nil
+}
+
+func (ps *PatientService) Delete(patientID int) error {
+	_, err := ps.DB.Exec(`
+		DELETE FROM patients
+		WHERE id = $1;
+	`, patientID)
+	if err != nil {
+		return fmt.Errorf("Delete patient: %w", err)
+	}
+	return nil
+}
+
+func (ps *PatientService) UpdatePatient(patient Patient) error {
+	var bckupPatient Patient
+	if patient.ID != 0 {
+		retrievedPatient, err := ps.RetrievePatientByID(patient.ID)
+		if err != nil {
+			return fmt.Errorf("update patient: %w", err)
+		}
+		bckupPatient = *retrievedPatient
+	}
+
+	if patient.Name == "" {
+		patient.Name = bckupPatient.Name
+	}
+	if patient.Gender == "" {
+		patient.Gender = bckupPatient.Gender
+	}
+	if time.Time(patient.BirthDate).IsZero() {
+		patient.BirthDate = bckupPatient.BirthDate
+	}
+	if patient.Keterangan == "" {
+		patient.Keterangan = bckupPatient.Keterangan
+	}
+
+	_, err := ps.DB.Exec(`
+		UPDATE patients
+		SET name = $2, gender = $3, birth_date = $4, keterangan = $5
+		WHERE id = $1;
+	`, patient.ID, patient.Name, patient.Gender, patient.BirthDate.ConvertToYMD(), patient.Keterangan)
+	if err != nil {
+		return fmt.Errorf("update patient: %w", err)
+	}
+
+	return nil
 }
