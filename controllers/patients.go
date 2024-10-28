@@ -126,3 +126,7 @@ func (pt Patients) UpdatePatient(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprint(w, `{"message":"success"}`)
 }
+
+func (pt Patients) GetPatientSummaryByPatientID(w http.ResponseWriter, r *http.Request) {
+	// TODO: Implement the function
+}

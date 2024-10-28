@@ -88,6 +88,9 @@ func webserver() {
 	recordService := &models.RecordService{
 		DB: db,
 	}
+	patientScanService := &models.PatientScanService{
+		DB: db,
+	}
 	emailService := models.NewEmailService(cfg.SMTP)
 
 	// SETUP MIDDLEWARE
@@ -119,6 +122,9 @@ func webserver() {
 	}
 	recordC := controllers.Records{
 		RecordService: recordService,
+	}
+	patientScanC := controllers.PatientScans{
+		PatientScansService: patientScanService,
 	}
 
 	// SETUP ROUTER AND ROUTES
@@ -165,6 +171,11 @@ func webserver() {
 		r.Get("/", recordC.GetAllPatientRecords)
 		r.Get("/patient/{patientID}", recordC.GetRecordsByPatientID)
 	})
+	r.Route("/patient_scan", func(r chi.Router) {
+		r.Get("/", patientScanC.Get)
+		r.Post("/{patientID}", patientScanC.Set)
+	})
+
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Page not found", http.StatusNotFound)
 	})
