@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -9,10 +10,12 @@ import (
 	"github.com/Biliard-Project/biliard-backend/controllers"
 	"github.com/Biliard-Project/biliard-backend/migrations"
 	"github.com/Biliard-Project/biliard-backend/models"
+	mqttcontroller "github.com/Biliard-Project/biliard-backend/mqtt_controller"
 	"github.com/Biliard-Project/biliard-backend/templates"
 	"github.com/Biliard-Project/biliard-backend/views"
 	"github.com/joho/godotenv"
 
+	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -188,8 +191,48 @@ func webserver() {
 	}
 }
 
+func mqttserver() {
+	cfg, err := loadEnvConfig()
+	if err != nil {
+		panic(err)
+	}
+
+	// SET UP DATABASE
+	db, err := models.Open(cfg.PSQL)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	recordService := &models.RecordService{
+		DB: db,
+	}
+
+	mqttHandler := mqttcontroller.MQTTHandler{
+		RecordService: recordService,
+	}
+
+	opts := MQTT.NewClientOptions()
+	opts.AddBroker(mqttcontroller.Broker)
+	opts.SetClientID(mqttcontroller.ClientID)
+	opts.SetDefaultPublishHandler(mqttHandler.MessagePubHandler)
+	opts.OnConnect = mqttHandler.OnConnectHandler
+	opts.OnConnectionLost = mqttHandler.ConnectionLostHandler
+
+	client := MQTT.NewClient(opts)
+	if token := client.Connect(); token.Wait() && token.Error() != nil {
+		log.Fatalf("Error connecting to MQTT broker: %v", token.Error())
+	}
+
+	// Subscribe to the topic
+	if token := client.Subscribe(mqttcontroller.Topic, 1, nil); token.Wait() && token.Error() != nil {
+		log.Fatalf("Error subscribing to topic: %v", token.Error())
+	}
+}
+
 func main() {
 	go webserver()
+	go mqttserver()
 	select {}
 }
 

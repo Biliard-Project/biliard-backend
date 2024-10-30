@@ -79,3 +79,24 @@ func (rs *RecordService) RetrieveRecordsByPatientID(patientID int) (*[]Record, e
 
 	return &records, nil
 }
+
+func (rs *RecordService) InsertNewRecord(patientID int, testDate JSONTime, bilirubin, oxygen, heart_rate float64) (*Record, error) {
+	row := rs.DB.QueryRow(`
+		INSERT INTO records (patient_id, test_date, bilirubin, oxygen, heart_rate)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id;
+		`, patientID, testDate.ConvertToYMD(), bilirubin, oxygen, heart_rate)
+
+	record := Record{
+		PatientID: patientID,
+		TestDate:  testDate,
+		Bilirubin: bilirubin,
+		Oxygen:    oxygen,
+		HeartRate: heart_rate,
+	}
+	err := row.Scan(&record.ID)
+	if err != nil {
+		return nil, fmt.Errorf("insert new record: %w", err)
+	}
+	return &record, nil
+}

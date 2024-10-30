@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/Biliard-Project/biliard-backend/models"
 	"github.com/go-chi/chi/v5"
@@ -128,5 +129,27 @@ func (pt Patients) UpdatePatient(w http.ResponseWriter, r *http.Request) {
 }
 
 func (pt Patients) GetPatientSummaryByPatientID(w http.ResponseWriter, r *http.Request) {
+	patientID, err := strconv.Atoi(chi.URLParam(r, "patientID"))
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "patientID must be an integer", http.StatusBadRequest)
+		return
+	}
+
+	patient, err := pt.PatientService.RetrievePatientByID(patientID)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "error getting the summary", http.StatusInternalServerError)
+		return
+	}
+
+	duration := time.Now().Sub(time.Time(patient.BirthDate))
+	durationHours := duration.Hours()
+
+	if durationHours <= 24.0 {
+	} else if durationHours <= 48.0 {
+	} else if durationHours <= 72.0 {
+	} else {
+	}
 	// TODO: Implement the function
 }
