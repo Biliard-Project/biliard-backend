@@ -1,6 +1,7 @@
 package mqttcontroller
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/Biliard-Project/biliard-backend/models"
@@ -18,7 +19,28 @@ type MQTTHandler struct {
 }
 
 func (mh MQTTHandler) MessagePubHandler(client MQTT.Client, msg MQTT.Message) {
+	// res, err := http.Get("http://localhost:3000/patients")
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return
+	// }
+	// reBody, err := io.ReadAll(res.Body)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return
+	// }
+	// fmt.Printf("response: %s\n", reBody)
+
+	patients, err := mh.RecordService.RetrieveRecordsByPatientID(3)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	patientJson, err := json.Marshal(patients)
+	fmt.Println(string(patientJson))
+
 	fmt.Printf("Received message: %s from topic: %s\n", msg.Payload(), msg.Topic())
+
 	// mh.RecordService.InsertNewRecord()
 }
 

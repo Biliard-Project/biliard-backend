@@ -38,10 +38,10 @@ func (rs *RecordService) RetrievePatientRecord() (*[]PatientRecord, error) {
 		FROM records
 		JOIN patients ON patients.id = records.patient_id;
 	`)
-	defer rows.Close()
 	if err != nil {
 		return nil, fmt.Errorf("RetrievePatientRecord: %w", err)
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var patientrecord PatientRecord
@@ -63,10 +63,10 @@ func (rs *RecordService) RetrieveRecordsByPatientID(patientID int) (*[]Record, e
 		FROM records
 		where records.patient_id = $1;
 	`, patientID)
-	defer rows.Close()
 	if err != nil {
 		return nil, fmt.Errorf("retrieverecordbyid: %w", err)
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var record Record

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -57,23 +58,23 @@ func loadEnvConfig() (config, error) {
 	return cfg, nil
 }
 
-func webserver() {
-	cfg, err := loadEnvConfig()
-	if err != nil {
-		panic(err)
-	}
-
-	// SET UP DATABASE
-	db, err := models.Open(cfg.PSQL)
-	if err != nil {
-		panic(err)
-	}
-	defer db.Close()
-
-	err = models.MigrateFS(db, migrations.FS, ".")
-	if err != nil {
-		panic(err)
-	}
+func webserver(db *sql.DB, cfg config) {
+	// cfg, err := loadEnvConfig()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	//
+	// // SET UP DATABASE
+	// db, err := models.Open(cfg.PSQL)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// defer db.Close()
+	//
+	// err = models.MigrateFS(db, migrations.FS, ".")
+	// if err != nil {
+	// 	panic(err)
+	// }
 
 	// SETUP SERVICES
 	userService := &models.UserService{
@@ -169,6 +170,14 @@ func webserver() {
 		r.Get("/{patientID}", patientC.ProcessGetPatientByID)
 		r.Delete("/{patientID}", patientC.DeletePatientByID)
 		r.Post("/", patientC.Create)
+
+		// cors fix
+		r.Options("/", func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprint(w, "ok")
+		})
+		r.Options("/{patientID}", func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprint(w, "ok")
+		})
 	})
 	r.Route("/records", func(r chi.Router) {
 		r.Get("/", recordC.GetAllPatientRecords)
@@ -185,33 +194,19 @@ func webserver() {
 
 	// START THE SERVER
 	fmt.Printf("starting server at %s...\n", cfg.Server.Address)
-	err = http.ListenAndServe(cfg.Server.Address, r)
+	err := http.ListenAndServe(cfg.Server.Address, r)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func mqttserver() {
-	cfg, err := loadEnvConfig()
-	if err != nil {
-		panic(err)
-	}
-
-	// SET UP DATABASE
-	db, err := models.Open(cfg.PSQL)
-	if err != nil {
-		panic(err)
-	}
-	defer db.Close()
-
+func mqttserver(db *sql.DB) {
 	recordService := &models.RecordService{
 		DB: db,
 	}
-
 	mqttHandler := mqttcontroller.MQTTHandler{
 		RecordService: recordService,
 	}
-
 	opts := MQTT.NewClientOptions()
 	opts.AddBroker(mqttcontroller.Broker)
 	opts.SetClientID(mqttcontroller.ClientID)
@@ -231,8 +226,25 @@ func mqttserver() {
 }
 
 func main() {
-	go webserver()
-	go mqttserver()
+	cfg, err := loadEnvConfig()
+	if err != nil {
+		panic(err)
+	}
+
+	// SET UP DATABASE
+	db, err := models.Open(cfg.PSQL)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	err = models.MigrateFS(db, migrations.FS, ".")
+	if err != nil {
+		panic(err)
+	}
+
+	go webserver(db, cfg)
+	go mqttserver(db)
 	select {}
 }
 
@@ -240,6 +252,8 @@ func setCors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+
 		next.ServeHTTP(w, r)
 	})
 }
