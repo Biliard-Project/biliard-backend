@@ -204,8 +204,12 @@ func mqttserver(db *sql.DB) {
 	recordService := &models.RecordService{
 		DB: db,
 	}
+	patientScanService := &models.PatientScanService{
+		DB: db,
+	}
 	mqttHandler := mqttcontroller.MQTTHandler{
-		RecordService: recordService,
+		RecordService:      recordService,
+		PatientScanService: patientScanService,
 	}
 	opts := MQTT.NewClientOptions()
 	opts.AddBroker(mqttcontroller.Broker)

@@ -1,8 +1,13 @@
 package mqttcontroller
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"math"
+	"net/http"
+	"time"
 
 	"github.com/Biliard-Project/biliard-backend/models"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
@@ -15,33 +20,100 @@ const (
 )
 
 type MQTTHandler struct {
-	RecordService *models.RecordService
+	RecordService      *models.RecordService
+	PatientScanService *models.PatientScanService
+}
+
+type SensorOutput struct {
+	R         uint8   `json:"r"`
+	G         uint8   `json:"g"`
+	B         uint8   `json:"b"`
+	C         uint8   `json:"c"`
+	HeartRate float64 `json:"hr"`
+	Oxygen    float64 `json:"o"`
+}
+
+type MLInput struct {
+	Red   uint8 `json:"Red"`
+	Green uint8 `json:"Green"`
+	Blue  uint8 `json:"Blue"`
+}
+
+type MLOutput struct {
+	Prediction float64 `json:"prediction"`
 }
 
 func (mh MQTTHandler) MessagePubHandler(client MQTT.Client, msg MQTT.Message) {
-	// res, err := http.Get("http://localhost:3000/patients")
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
-	// reBody, err := io.ReadAll(res.Body)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
-	// fmt.Printf("response: %s\n", reBody)
+	var sensorOutput SensorOutput
+	fmt.Println(string(msg.Payload()))
 
-	patients, err := mh.RecordService.RetrieveRecordsByPatientID(3)
+	err := json.Unmarshal(msg.Payload(), &sensorOutput)
 	if err != nil {
+		fmt.Println("jsoning 0")
+		fmt.Printf("Error Unmarshalling %s\n", msg.Payload())
+		return
+	}
+
+	mlInput := MLInput{
+		Red:   sensorOutput.R,
+		Green: sensorOutput.G,
+		Blue:  sensorOutput.B,
+	}
+
+	jsonData, err := json.Marshal(mlInput)
+	if err != nil {
+		fmt.Println("1")
 		fmt.Println(err)
 		return
 	}
-	patientJson, err := json.Marshal(patients)
-	fmt.Println(string(patientJson))
 
-	fmt.Printf("Received message: %s from topic: %s\n", msg.Payload(), msg.Topic())
+	req, err := http.NewRequest("POST", "http://localhost:5005/predict", bytes.NewBuffer(jsonData))
+	if err != nil {
+		fmt.Println("2")
+		fmt.Println(err)
+		return
+	}
 
-	// mh.RecordService.InsertNewRecord()
+	req.Header.Set("Content-Type", "application/json")
+	httpClient := &http.Client{}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		fmt.Println("3")
+		fmt.Println(err)
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("4")
+		fmt.Println(err)
+		return
+	}
+
+	var mlOutput MLOutput
+	err = json.Unmarshal(body, &mlOutput)
+	if err != nil {
+		fmt.Println("5")
+		fmt.Println(err)
+		return
+	}
+	mlOutput.Prediction = math.Round(mlOutput.Prediction*100) / 100
+
+	patient, err := mh.PatientScanService.Get()
+	if err != nil {
+		fmt.Println("6")
+		fmt.Println(err)
+		return
+	}
+
+	insertedpatient, err := mh.RecordService.InsertNewRecord(patient.ID, models.JSONTime(time.Now()), mlOutput.Prediction, sensorOutput.Oxygen, sensorOutput.HeartRate)
+	if err != nil {
+		fmt.Println("7")
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(insertedpatient)
 }
 
 func (mh MQTTHandler) OnConnectHandler(client MQTT.Client) {
